@@ -33,7 +33,7 @@ __revision__ = '$Format:%H$'
 from qgis.PyQt.Qt import QVariant
 from qgis.utils import iface
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessing,
+from qgis.core import (QgsProcessing, QgsProcessingException,
                        QgsProcessingOutputVectorLayer,
                        QgsProcessingParameterBoolean,
                        QgsProcessingParameterVectorLayer,
@@ -42,6 +42,7 @@ from qgis.core import (QgsProcessing,
                        QgsProcessingParameterField,
                        QgsProcessingParameterRasterLayer)
 
+from .services.messages_service import MessageService
 from .services.layer_services import LayerService
 
 
@@ -118,6 +119,7 @@ class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
         """
 
         layerService = LayerService()
+        messageService = MessageService()
 
         inputRasterLayer = self.parameterAsRasterLayer(parameters, self.RASTER_INPUT, context)
         inputPointLayer = self.parameterAsVectorLayer(parameters, self.INPUT, context)
@@ -125,20 +127,26 @@ class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
         selectedOnly = self.parameterAsBool(parameters, self.SELECTED, context)
         newField = self.parameterAsString(parameters, self.NEW_FIELD, context)
 
-        newFeatures = []
+        if inputPointLayer.isEditable():
+            errorMessage = f'Layer {inputPointLayer.name()} is in editable mode.'
+            raise QgsProcessingException(self.tr(errorMessage))
 
-        if newField != 'SAMPLE':
-            layerService.addNewField(inputPointLayer, newField, QVariant.Double)
+        else:
 
-        input_features = inputPointLayer.selectedFeatures() if selectedOnly else inputPointLayer.getFeatures()
+            newFeatures = []
 
-        for feature in input_features:
-            updated_feature = layerService.extractValueFromRaster(inputRasterLayer, feature, layerAttribute, newField)
-            newFeatures.append(updated_feature)
+            if newField != 'SAMPLE':
+                layerService.addNewField(inputPointLayer, newField, QVariant.Double)
 
-        layerService.updateFeature(iface, inputPointLayer, newFeatures, feedback)
+            input_features = inputPointLayer.selectedFeatures() if selectedOnly else inputPointLayer.getFeatures()
 
-        return {self.OUTPUT: inputPointLayer}
+            for feature in input_features:
+                updated_feature = layerService.extractValueFromRaster(inputRasterLayer, feature, layerAttribute, newField)
+                newFeatures.append(updated_feature)
+
+            layerService.updateFeature(iface, inputPointLayer, newFeatures, feedback)
+
+            return {self.OUTPUT: inputPointLayer}
 
     def name(self):
         """

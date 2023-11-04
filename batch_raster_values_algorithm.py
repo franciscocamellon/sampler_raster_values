@@ -35,17 +35,10 @@ import os
 from qgis.PyQt.Qt import QVariant
 from qgis.utils import iface
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import (QgsProcessingParameterEnum, QgsProcessing, QgsRasterLayer, QgsPointXY,
-                       QgsProcessingOutputVectorLayer,
-                       QgsProcessingParameterBoolean, QgsProcessingParameterVectorLayer, QgsProcessingParameterFile,
-                       QgsProcessingParameterFolderDestination,
-                       QgsProcessingParameterString,
-                       QgsFeatureSink,
-                       QgsProcessingAlgorithm,
-                       QgsProcessingParameterField,
-                       QgsProcessingParameterRasterLayer,
-                       QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink)
+from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingParameterString,
+                       QgsProcessingOutputVectorLayer, QgsProcessingException,
+                       QgsProcessingParameterVectorLayer, QgsProcessingParameterFile,
+                       QgsProcessingAlgorithm, QgsProcessingParameterField)
 
 from .services.system_service import SystemService
 from .services.layer_services import LayerService
@@ -143,7 +136,6 @@ class BatchRasterValuesAlgorithm(QgsProcessingAlgorithm):
         """
 
         layerService = LayerService()
-        systemService = SystemService()
 
         inputFolder = self.parameterAsFile(parameters, self.INPUT_FOLDER, context)
         inputPointLayer = self.parameterAsVectorLayer(parameters, self.INPUT_LAYER, context)
@@ -151,6 +143,9 @@ class BatchRasterValuesAlgorithm(QgsProcessingAlgorithm):
         layerAttribute = self.parameterAsString(parameters, self.INPUT_FIELD, context)
         dateField = self.parameterAsString(parameters, self.DATE_FIELD, context)
         newField = self.parameterAsString(parameters, self.NEW_FIELD, context)
+
+        if inputPointLayer.isEditable():
+            raise QgsProcessingException(self.tr(f'Layer {inputPointLayer.name()} is in editable mode.'))
 
         newFeatures = []
 
@@ -163,10 +158,7 @@ class BatchRasterValuesAlgorithm(QgsProcessingAlgorithm):
 
                 for feature in inputPointLayer.getFeatures():
 
-                    startDate, endDate = systemService.getDateRange(imageFile)
-                    dateObject = layerService.getDateFromFeature(feature, dateField)
-
-                    isWithinRange = systemService.isDateWithinRange(dateObject, startDate, endDate)
+                    isWithinRange = layerService.checkFeatureDateRange(feature, imageFile, dateField)
 
                     if isWithinRange:
                         rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,

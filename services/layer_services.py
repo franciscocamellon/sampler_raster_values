@@ -30,17 +30,25 @@ __copyright__ = '(C) 2023 by CamellOnCase'
 
 __revision__ = '$Format:%H$'
 
+import os
+
 from qgis.core.additions.edit import edit
 from qgis.core import QgsField, QgsPointXY, QgsRasterLayer
+
+from .system_service import SystemService
 
 
 class LayerService:
 
     def __init__(self):
         """
-                Constructor for the LayerService class.
-                """
-        pass
+        Constructor for the LayerService class.
+        """
+        self.systemService = SystemService()
+
+    @staticmethod
+    def isEditable(layer):
+        return layer.isEditable()
 
     @staticmethod
     def addNewField(layer, fieldName, fieldType):
@@ -82,6 +90,7 @@ class LayerService:
     def updateFeature(iface, layer, featureList, feedback):
         """
         Updates a list of features in a vector layer.
+        :param iface: instance of QgsInterface.
         :param layer: The vector layer containing the features to be updated.
         :param featureList: List of features to update.
         :param feedback: Feedback object for progress and user cancellation.
@@ -143,3 +152,10 @@ class LayerService:
         """
         data_field = feature[dateField]
         return data_field.toPyDate()
+
+    def checkFeatureDateRange(self, feature, imageFile, dateField):
+
+        startDate, endDate = self.systemService.getDateRange(imageFile)
+        dateObject = self.getDateFromFeature(feature, dateField)
+
+        return self.systemService.isDateWithinRange(dateObject, startDate, endDate)
