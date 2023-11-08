@@ -32,6 +32,7 @@ __copyright__ = '(C) 2023 by Francisco Camello'
 __revision__ = '$Format:%H$'
 
 import os
+import csv
 
 from datetime import datetime
 from qgis.core.additions.edit import edit
@@ -45,6 +46,20 @@ class SystemService:
         Constructor for the SystemService class.
         """
         pass
+
+    def readFilePoints(self, filePath):
+        with open('example.csv', newline='') as csvfile:
+            reader = csv.reader(csvfile)
+            for row in reader:
+                print(', '.join(row))
+
+    @staticmethod
+    def getDictHeaderTypes(dataFrame):
+        dataFrameDictionary = dict()
+        for columnName, columnType in dataFrame.dtypes.to_dict().items():
+            dataFrameDictionary[columnName] = columnType
+        return dataFrameDictionary
+
 
     def getDateRange(self, fileName):
         """

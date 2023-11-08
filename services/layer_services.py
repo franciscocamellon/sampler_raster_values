@@ -34,6 +34,7 @@ import os
 
 from qgis.core.additions.edit import edit
 from qgis.core import QgsField, QgsPointXY, QgsRasterLayer
+from qgis.PyQt.Qt import QVariant
 
 from .system_service import SystemService
 
@@ -61,6 +62,26 @@ class LayerService:
         with edit(layer):
             layer.addAttribute(QgsField(fieldName, fieldType))
             layer.updateFields()
+
+    def createFields(self, fieldDictionary):
+        layerFields = []
+
+        for fieldName, fieldType in fieldDictionary.items():
+            layerField = QgsField(fieldName, self.dtypeToVariant(fieldType))
+            layerFields.append(layerField)
+
+        return layerFields
+
+    @staticmethod
+    def dtypeToVariant(fieldType):
+        if fieldType == 'int64':
+            return QVariant.Int
+        elif fieldType == '<M8[ns]':
+            return QVariant.Date
+        elif fieldType == 'float64':
+            return QVariant.Double
+        else:
+            return QVariant.String
 
     @staticmethod
     def extractValueFromRaster(raster, feature, fieldName, newFieldName):
