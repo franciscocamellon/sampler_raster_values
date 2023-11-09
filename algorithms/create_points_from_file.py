@@ -31,6 +31,7 @@ __revision__ = '$Format:%H$'
 
 import csv
 import pandas as pd
+from pandas._libs.tslibs.timestamps import Timestamp
 
 from qgis.PyQt.Qt import QVariant
 from qgis.utils import iface
@@ -103,8 +104,13 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
             feature = QgsFeature(fields)
 
             for key, value in point.items():
-                # print(key,": ", type(value), '-', value)
-                feature[key] = value
+                if isinstance(value, Timestamp):
+                    # Convert Timestamp to QVariant.Date
+                    date_value = value.to_pydatetime().date().strftime('%d-%m-%Y')
+                    print(date_value)
+                    feature[key] = str(date_value)
+                else:
+                    feature[key] = value
 
             geometry = QgsGeometry.fromPointXY(QgsPointXY(point['Longitude'], point['Latitude']))
             feature.setGeometry(geometry)
