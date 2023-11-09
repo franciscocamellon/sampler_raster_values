@@ -33,7 +33,7 @@ __revision__ = '$Format:%H$'
 import os
 
 from qgis.core.additions.edit import edit
-from qgis.core import QgsField, QgsPointXY, QgsRasterLayer
+from qgis.core import QgsField, QgsFields, QgsPointXY, QgsRasterLayer
 from qgis.PyQt.Qt import QVariant
 
 from .system_service import SystemService
@@ -64,7 +64,7 @@ class LayerService:
             layer.updateFields()
 
     def createFields(self, fieldDictionary):
-        layerFields = []
+        layerFields = QgsFields()
 
         for fieldName, fieldType in fieldDictionary.items():
             layerField = QgsField(fieldName, self.dtypeToVariant(fieldType))

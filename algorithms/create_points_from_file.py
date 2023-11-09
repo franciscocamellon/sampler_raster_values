@@ -35,23 +35,23 @@ import pandas as pd
 from qgis.PyQt.Qt import QVariant
 from qgis.utils import iface
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY
-from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingParameterString,
+from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject
+from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingParameterString, QgsFeatureSink,
                        QgsProcessingOutputVectorLayer, QgsProcessingException,
                        QgsProcessingParameterVectorLayer, QgsProcessingParameterFile,
-                       QgsProcessingAlgorithm, QgsProcessingParameterField)
+                       QgsProcessingAlgorithm, QgsProcessingParameterField, QgsProcessingParameterFeatureSink)
 
 from ..services.layer_services import LayerService
 from ..services.system_service import SystemService
 
 
 class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
-
     # Constants used to refer to parameters and outputs. They will be
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
     OUTPUT = 'OUTPUT'
+    INPUT_FILE = 'INPUT_FILE'
     INPUT_FILE = 'INPUT_FILE'
 
     def initAlgorithm(self, config):
@@ -69,11 +69,10 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
                 behavior=QgsProcessingParameterFile.File
             )
         )
-
-        self.addOutput(
-            QgsProcessingOutputVectorLayer(
+        self.addParameter(
+            QgsProcessingParameterFeatureSink(
                 self.OUTPUT,
-                self.tr("Original layer without empty geometries")
+                self.tr('Point observations')
             )
         )
 
@@ -86,58 +85,45 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
         systemService = SystemService()
 
         inputFile = self.parameterAsFile(parameters, self.INPUT_FILE, context)
-        print(inputFile)
 
-        # Replace 'your_file.xls' with the path to your XLS file
-        xls_file = 'your_file.xls'
-
-        # Read the XLS file into a DataFrame
-        pointDataFrame = pd.read_excel(inputFile)
+        pointDataFrame = pd.read_excel(inputFile, converters={'Date': pd.to_datetime})
         d = pointDataFrame.dtypes.to_dict()
 
-
         fields = layerService.createFields(pointDataFrame.dtypes.to_dict())
-        layer = QgsVectorLayer("Point", "MyMemoryLayer", "memory")
-        layer.dataProvider().addAttributes(fields)
+
+        project = QgsProject.instance()
+        project_crs = project.crs()
+
+        (sink, destination_id) = self.parameterAsSink(parameters, self.OUTPUT, context, fields, 1, project_crs)
 
         df = pointDataFrame.to_dict(orient='records')
+
         features = []
         for point in df:
-            feature = QgsFeature()
-            feature.setAttributes([point['id'], "Feature 1"])
-            feature.setAttributes([point['Date'], "Feature 1"])
-            feature.setAttributes([point['Latitude'], "Feature 1"])
-            feature.setAttributes([point['Longitude'], "Feature 1"])
-            feature.setAttributes([point['Depht'], "Feature 1"])
-            feature.setAttributes([point['8Day_chlor_a'], "Feature 1"])
-            feature.setAttributes([point['8Day_sst'], "Feature 1"])
-            feature.setAttributes([point['Monthly_sst'], "Feature 1"])
-            feature.setAttributes([point['Monthly_chlor'], "Feature 1"])
-            feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(0, 0)))
+            feature = QgsFeature(fields)
 
+            for key, value in point.items():
+                # print(key,": ", type(value), '-', value)
+                feature[key] = value
 
-            # # Start editing the layer
+            geometry = QgsGeometry.fromPointXY(QgsPointXY(point['Longitude'], point['Latitude']))
+            feature.setGeometry(geometry)
+            features.append(feature)
 
-            #
-            # # Add features to the layer
+        total = 100.0 / len(features) if len(features) else 0
 
-            # layer.dataProvider().addFeatures([feature])
-            #
-            # feature = QgsFeature()
-            # feature.setAttributes([2, "Feature 2"])
-            # feature.setGeometry(QgsGeometry.fromPointXY(QgsPointXY(1, 1)))
+        for current, feature in enumerate(features):
+            # Stop the algorithm if cancel button has been clicked
+            if feedback.isCanceled():
+                break
 
+            # Add a feature in the sink
+            sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
-            print(point)
-        layer.startEditing()
-        layer.dataProvider().addFeatures(features)
+            # Update the progress bar
+            feedback.setProgress(int(current * total))
 
-        # Commit changes and stop editing
-        layer.commitChanges()
-
-
-
-        return {self.OUTPUT: None}
+        return {self.OUTPUT: destination_id}
 
     def name(self):
         """
