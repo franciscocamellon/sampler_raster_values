@@ -93,7 +93,7 @@ class SystemService:
         :param stringDate: The string date to format.
         :returns: A datetime.date object.
         """
-        return datetime.strptime(stringDate, "%Y%m%d").date()
+        return datetime.strptime(stringDate, "%Y-%m-%d").date()
 
     @staticmethod
     def splitString(string, character):

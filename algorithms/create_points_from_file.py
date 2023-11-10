@@ -87,8 +87,9 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
 
         inputFile = self.parameterAsFile(parameters, self.INPUT_FILE, context)
 
-        pointDataFrame = pd.read_excel(inputFile, converters={'Date': pd.to_datetime})
-        d = pointDataFrame.dtypes.to_dict()
+        # pointDataFrame = pd.read_excel(inputFile, converters={'Date': pd.to_datetime})
+        pointDataFrame = pd.read_excel(inputFile, parse_dates=['Date'])
+
 
         fields = layerService.createFields(pointDataFrame.dtypes.to_dict())
 
@@ -106,8 +107,9 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
             for key, value in point.items():
                 if isinstance(value, Timestamp):
                     # Convert Timestamp to QVariant.Date
-                    date_value = value.to_pydatetime().date().strftime('%d-%m-%Y')
-                    print(date_value)
+                    date_value = value.to_pydatetime().date()
+
+                    # print(date_value)
                     feature[key] = str(date_value)
                 else:
                     feature[key] = value

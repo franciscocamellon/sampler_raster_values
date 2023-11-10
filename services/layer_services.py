@@ -77,7 +77,7 @@ class LayerService:
         if fieldType == 'int64':
             return QVariant.Int
         elif fieldType == '<M8[ns]':
-            return QVariant.Date
+            return QVariant.String
         elif fieldType == 'float64':
             return QVariant.Double
         else:
