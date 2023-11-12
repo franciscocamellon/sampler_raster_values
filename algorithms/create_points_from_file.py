@@ -30,6 +30,9 @@ __copyright__ = '(C) 2023 by CamellOnCase'
 __revision__ = '$Format:%H$'
 
 import csv
+import math
+from datetime import datetime
+
 import pandas as pd
 from pandas._libs.tslibs.timestamps import Timestamp
 
@@ -52,7 +55,6 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
     # calling from the QGIS console.
 
     OUTPUT = 'OUTPUT'
-    INPUT_FILE = 'INPUT_FILE'
     INPUT_FILE = 'INPUT_FILE'
 
     def initAlgorithm(self, config):
@@ -90,7 +92,6 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
         # pointDataFrame = pd.read_excel(inputFile, converters={'Date': pd.to_datetime})
         pointDataFrame = pd.read_excel(inputFile, parse_dates=['Date'])
 
-
         fields = layerService.createFields(pointDataFrame.dtypes.to_dict())
 
         project = QgsProject.instance()
@@ -108,9 +109,16 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
                 if isinstance(value, Timestamp):
                     # Convert Timestamp to QVariant.Date
                     date_value = value.to_pydatetime().date()
+                    #input_date = datetime.strptime(input_date_str, '%Y-%m-%d')
 
-                    # print(date_value)
-                    feature[key] = str(date_value)
+                    # Format the datetime object as a string in the desired format
+                    output_date_str = date_value.strftime('%d/%m/%Y')
+                    #new_output_date_str = datetime.strptime(output_date_str, '%d/%m/%Y')
+
+                    #print(new_output_date_str)
+                    feature[key] = output_date_str
+                elif math.isnan(value):
+                    feature[key] = None
                 else:
                     feature[key] = value
 
@@ -130,8 +138,9 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
 
             # Update the progress bar
             feedback.setProgress(int(current * total))
-
+        """"""
         return {self.OUTPUT: destination_id}
+        #return {self.OUTPUT: None}
 
     def name(self):
         """
@@ -165,7 +174,7 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return ''
+        return 'File Management'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
