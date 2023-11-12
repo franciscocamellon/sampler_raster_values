@@ -180,7 +180,7 @@ class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
         contain lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return ''
+        return 'Extraction'
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
