@@ -31,9 +31,11 @@ __copyright__ = '(C) 2023 by CamellOnCase'
 __revision__ = '$Format:%H$'
 
 import os
+import numpy as np
 
+from osgeo import gdal
 from qgis.core.additions.edit import edit
-from qgis.core import QgsField, QgsFields, QgsPointXY, QgsRasterLayer
+from qgis.core import QgsProject, QgsFeature, QgsField, QgsFields, QgsPointXY, QgsRasterLayer, QgsRasterDataProvider
 from qgis.PyQt.Qt import QVariant
 
 from .system_service import SystemService
@@ -71,6 +73,9 @@ class LayerService:
             layerFields.append(layerField)
 
         return layerFields
+
+    def createField(self):
+        pass
 
     @staticmethod
     def dtypeToVariant(fieldType):
@@ -139,17 +144,26 @@ class LayerService:
         layer.triggerRepaint()
         layer.endEditCommand()
 
-    def createNetcdfRaster(self, netcdfInt, rasterName, rasterUri):
+    def createNetcdfRaster(self, netcdfInt, rasterName, rasterUri, gdalRaster=False):
         """
         Creates a QGIS raster layer from a NetCDF dataset.
         :param netcdfInt: NetCDF variable integer identifier (0 or 1).
         :param rasterName: Name of the new raster layer.
         :param rasterUri: URI of the NetCDF file.
+        :param gdalRaster: Boolean to control flow.
         :returns: The created QGIS raster layer.
         """
         netcdfVariable = self.retrieveNetcdfVariable(netcdfInt)
         uri = f'NETCDF:"{rasterUri}":{netcdfVariable}'
+
+        if gdalRaster:
+            return gdal.Open(uri)
+
         return QgsRasterLayer(uri, rasterName)
+
+    @staticmethod
+    def createQgsRasterLayer(rasterUri, rasterName):
+        return QgsRasterLayer(rasterUri, rasterName, "gdal")
 
     @staticmethod
     def retrieveNetcdfVariable(netcdfVariable):
@@ -180,3 +194,22 @@ class LayerService:
         dateObject = self.getDateFromFeature(feature, dateField)
 
         return self.systemService.isDateWithinRange(dateObject, startDate, endDate)
+
+    @staticmethod
+    def getSummaryStatistics(rasterLayer, bandNumber):
+        band = rasterLayer.GetRasterBand(bandNumber)
+        return band.ComputeStatistics(0)
+
+    @staticmethod
+    def createFeature(fields, param):
+        feature = QgsFeature(fields)
+        feature['id'] = param[0]
+        feature['Date'] = param[1]
+        feature['Variable'] = param[2]
+        feature['Minimum'] = param[3][0]
+        feature['Maximum'] = param[3][1]
+        feature['Median'] = param[3][2]
+        feature['Stddev'] = param[3][3]
+
+        return feature
+
