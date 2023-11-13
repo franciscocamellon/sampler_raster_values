@@ -34,10 +34,10 @@ import os
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
-from .algorithms.batch_summarized_extractor_values import BatchSummarizedExtractorAlgorithm
-from .algorithms.create_points_from_file import CreatePointsFromFileAlgorithm
-from .batch_raster_values_algorithm import BatchRasterValuesAlgorithm
-from .sampler_raster_values_algorithm import SamplerRasterValuesAlgorithm
+from ..algorithms.batch_summarized_extractor_values import BatchSummarizedExtractorAlgorithm
+from ..algorithms.create_points_from_file import CreatePointsFromFileAlgorithm
+from ..algorithms.batch_sampler_raster_values import BatchSamplerRasterValuesAlgorithm
+from ..algorithms.sampler_raster_values_algorithm import SamplerRasterValuesAlgorithm
 
 
 class SamplerRasterValuesProvider(QgsProcessingProvider):
@@ -60,7 +60,7 @@ class SamplerRasterValuesProvider(QgsProcessingProvider):
         Loads all algorithms belonging to this provider.
         """
         self.addAlgorithm(SamplerRasterValuesAlgorithm())
-        self.addAlgorithm(BatchRasterValuesAlgorithm())
+        self.addAlgorithm(BatchSamplerRasterValuesAlgorithm())
         self.addAlgorithm(CreatePointsFromFileAlgorithm())
         self.addAlgorithm(BatchSummarizedExtractorAlgorithm())
         # add additional algorithms here
@@ -88,7 +88,7 @@ class SamplerRasterValuesProvider(QgsProcessingProvider):
         Should return a QIcon which is used for your provider inside
         the Processing toolbox.
         """
-        return QIcon(os.path.dirname(__file__) + '/icons/sampler_raster_values.png')
+        return QIcon(os.path.join(os.path.dirname(__file__), os.pardir) + '/icons/sampler_raster_values.png')
 
     def longName(self):
         """

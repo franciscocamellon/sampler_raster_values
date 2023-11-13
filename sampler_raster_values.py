@@ -34,8 +34,9 @@ import os
 import sys
 import inspect
 
-from qgis.core import QgsProcessingAlgorithm, QgsApplication
-from .sampler_raster_values_provider import SamplerRasterValuesProvider
+from qgis.core import QgsApplication
+
+from .provider.sampler_raster_values_provider import SamplerRasterValuesProvider
 
 cmd_folder = os.path.split(inspect.getfile(inspect.currentframe()))[0]
 
