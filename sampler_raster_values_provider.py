@@ -34,6 +34,7 @@ import os
 from qgis.core import QgsProcessingProvider
 from qgis.PyQt.QtGui import QIcon
 
+from .algorithms.batch_summarized_extractor_values import BatchSummarizedExtractorAlgorithm
 from .algorithms.create_points_from_file import CreatePointsFromFileAlgorithm
 from .batch_raster_values_algorithm import BatchRasterValuesAlgorithm
 from .sampler_raster_values_algorithm import SamplerRasterValuesAlgorithm
@@ -61,6 +62,7 @@ class SamplerRasterValuesProvider(QgsProcessingProvider):
         self.addAlgorithm(SamplerRasterValuesAlgorithm())
         self.addAlgorithm(BatchRasterValuesAlgorithm())
         self.addAlgorithm(CreatePointsFromFileAlgorithm())
+        self.addAlgorithm(BatchSummarizedExtractorAlgorithm())
         # add additional algorithms here
         # self.addAlgorithm(MyOtherAlgorithm())
 

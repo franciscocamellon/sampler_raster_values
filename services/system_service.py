@@ -33,6 +33,7 @@ __revision__ = '$Format:%H$'
 
 import os
 import csv
+import numpy as np
 
 from datetime import datetime
 from qgis.core.additions.edit import edit
@@ -60,15 +61,19 @@ class SystemService:
             dataFrameDictionary[columnName] = columnType
         return dataFrameDictionary
 
-
-    def getDateRange(self, fileName):
+    def getDateRange(self, fileName, rangeType=False):
         """
         Extracts a date range from a filename and returns it as a tuple of start and end dates.
         :param fileName: The name of the file containing the date range information.
+        :param rangeType: Boolean to control flow.
         :returns: A tuple (startDate, endDate) as datetime.date objects.
         """
         parts = self.splitString(fileName, '.')
         dateRangeStr = parts[1]
+
+        if rangeType:
+            return dateRangeStr
+
         startDateStr, endDateStr = self.splitString(dateRangeStr, '_')
 
         startDate = self.formatDate(startDateStr)
@@ -104,3 +109,14 @@ class SystemService:
         :returns: A list of substrings.
         """
         return string.split(character)
+
+    @staticmethod
+    def filterFilesInDirectory(directory, fileType):
+        filesInDirectory = []
+        for current, imageFile in enumerate(os.listdir(directory)):
+            if imageFile.lower().endswith(fileType) and os.path.isfile(os.path.join(directory, imageFile)):
+                filesInDirectory.append(os.path.join(directory, imageFile))
+
+        return filesInDirectory
+
+
