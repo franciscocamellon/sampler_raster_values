@@ -92,13 +92,17 @@ class SystemService:
         return startDate <= date <= endDate
 
     @staticmethod
-    def formatDate(stringDate):
+    def formatDate(stringDate, dateFormat=None):
         """
         Converts a string date in the format 'YYYYMMDD' to a datetime.date object.
         :param stringDate: The string date to format.
+        :param dateFormat: The date format.
         :returns: A datetime.date object.
         """
-        return datetime.strptime(stringDate, "%Y%m%d").date()
+        if dateFormat is not None:
+            return datetime.strptime(stringDate, dateFormat).date()
+
+        return datetime.strptime(stringDate, '%Y%m%d').date()
 
     @staticmethod
     def splitString(string, character):

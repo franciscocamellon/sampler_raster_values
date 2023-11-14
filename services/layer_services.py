@@ -196,20 +196,42 @@ class LayerService:
         return self.systemService.isDateWithinRange(dateObject, startDate, endDate)
 
     @staticmethod
-    def getSummaryStatistics(rasterLayer, bandNumber):
+    def readGdalRasterAsArray(gdalRaster, bandNumber):
+        rasterBand = gdalRaster.GetRasterBand(bandNumber)
+        return rasterBand.ReadAsArray()
+
+    @staticmethod
+    def getGdalMetadata(gdalRasterBand):
+        return gdalRasterBand.GetMetadata()
+
+    def getSummaryStatistics(self, rasterLayer, bandNumber):
+        scaledStats = []
         band = rasterLayer.GetRasterBand(bandNumber)
-        return band.ComputeStatistics(0)
+        stats = band.ComputeStatistics(0)
+        bandAsArray = band.ReadAsArray()
+        stats.append(float(np.mean(bandAsArray)))
+
+        metadata = self.getGdalMetadata(band)
+
+        if float(metadata['scale_factor']) < 1:
+            for stat in stats:
+                scaledStats.append(stat * float(metadata['scale_factor']))
+            return scaledStats
+        return stats
 
     @staticmethod
     def createFeature(fields, param):
         feature = QgsFeature(fields)
         feature['id'] = param[0]
-        feature['Date'] = param[1]
-        feature['Variable'] = param[2]
-        feature['Minimum'] = param[3][0]
-        feature['Maximum'] = param[3][1]
-        feature['Median'] = param[3][2]
-        feature['Stddev'] = param[3][3]
+        feature['Observation date'] = str(param[1])
+        feature['Start date'] = str(param[2])
+        feature['End date'] = str(param[3])
+        feature['Variable'] = param[4]
+        feature['Minimum'] = param[5][0]
+        feature['Maximum'] = param[5][1]
+        feature['Median'] = param[5][2]
+        feature['Mean'] = param[5][4]
+        feature['Stddev'] = param[5][3]
 
         return feature
 

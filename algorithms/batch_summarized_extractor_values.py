@@ -57,6 +57,8 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
     # used when calling the algorithm from another algorithm, or when
     # calling from the QGIS console.
 
+    INPUT_FILE = 'INPUT_FILE'
+    DATE_FIELD = 'DATE_FIELD'
     INPUT_FOLDER = 'INPUT_FOLDER'
     AQUA_MODIS_VARIABLE = 'AQUA_MODIS_VARIABLE'
     BAND_NUMBER = 'BAND_NUMBER'
@@ -70,6 +72,23 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
         # We add the input vector features source. It can have any kind of
         # geometry.
+        self.addParameter(
+            QgsProcessingParameterFile(
+                self.INPUT_FILE,
+                self.tr('Points spreadsheet'),
+                behavior=QgsProcessingParameterFile.File
+            )
+        )
+
+        self.addParameter(
+            QgsProcessingParameterString(
+                self.DATE_FIELD,
+                self.tr('Date field'),
+                defaultValue='Write the name of date field here',
+                optional=False
+            )
+        )
+
         self.addParameter(
             QgsProcessingParameterFile(
                 self.INPUT_FOLDER,
@@ -115,18 +134,28 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         systemService = SystemService()
 
         inputFolder = self.parameterAsFile(parameters, self.INPUT_FOLDER, context)
+        inputFile = self.parameterAsFile(parameters, self.INPUT_FILE, context)
         aquaModisVariable = self.parameterAsInt(parameters, self.AQUA_MODIS_VARIABLE, context)
         bandNumber = self.parameterAsInt(parameters, self.BAND_NUMBER, context)
+        dateField = self.parameterAsString(parameters, self.DATE_FIELD, context)
 
         project = QgsProject.instance()
         project_crs = project.crs()
 
+        pointDataFrame = pd.read_excel(inputFile)
+        dateList = pointDataFrame[dateField].to_list()
+        formattedDateList = []
+        for date_string in dateList:
+            date_object = datetime.strptime(date_string, '%y/%m/%d')
+            formatted_date = date_object.strftime('%Y%m%d')
+            formattedDateList.append(systemService.formatDate(formatted_date))
+
         variable = layerService.retrieveNetcdfVariable(aquaModisVariable)
 
-        fields = layerService.createFields({'id': QVariant.Int, 'Date': QVariant.String, 'Variable': QVariant.String,
-                                            'Minimum': QVariant.Double, 'Maximum': QVariant.Double,
-                                            'Median': QVariant.Double,
-                                            'Stddev': QVariant.Double})
+        fields = layerService.createFields({'id': QVariant.Int, 'Observation date': QVariant.String,
+                                            'Start date': QVariant.String, 'End date': QVariant.String, 'Variable': QVariant.String,
+                                            'Minimum': QVariant.Double, 'Maximum': QVariant.Double, 'Median': QVariant.Double,
+                                            'Mean': QVariant.Double, 'Stddev': QVariant.Double})
 
         (sink, destination_id) = self.parameterAsSink(parameters, self.OUTPUT, context, fields, 100, project_crs)
 
@@ -138,24 +167,32 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 raise QgsProcessingException(self.tr('\nProcessing cancelled by the user!\n'))
 
-            rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
-                                                          os.path.join(inputFolder, imageFile), True)
-            dateRange = systemService.getDateRange(imageFile, True)
+            dateRange = systemService.getDateRange(imageFile)
 
-            if rasterLayer is not None:
+            for date in formattedDateList:
+                if systemService.isDateWithinRange(date, dateRange[0], dateRange[1]):
 
-                stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1))
-                feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+                    rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
+                                                                  os.path.join(inputFolder, imageFile), True)
 
-                feature = layerService.createFeature(fields, [current, dateRange, variable, stats])
-                sink.addFeature(feature, QgsFeatureSink.FastInsert)
+                    if rasterLayer is not None:
 
-                feedback.setProgress(int(current * total))
+                        stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1))
+                        feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+                        observationDate = datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
+                        startDate = datetime.strptime(str(dateRange[0]), '%Y-%m-%d').strftime('%d/%m/%Y')
+                        endDate = datetime.strptime(str(dateRange[1]), '%Y-%m-%d').strftime('%d/%m/%Y')
 
-            else:
-                raise QgsProcessingException(self.tr('\nInvalid raster!\n'))
+                        feature = layerService.createFeature(fields, [current, observationDate, startDate, endDate,
+                                                                      variable, stats])
+                        sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
-        return {self.OUTPUT: destination_id}
+                        feedback.setProgress(int(current * total))
+
+                    else:
+                        raise QgsProcessingException(self.tr('\nInvalid raster!\n'))
+
+        return {self.OUTPUT: None}
 
     def name(self):
         """
