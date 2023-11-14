@@ -204,12 +204,15 @@ class LayerService:
     def createFeature(fields, param):
         feature = QgsFeature(fields)
         feature['id'] = param[0]
-        feature['Date'] = param[1]
-        feature['Variable'] = param[2]
-        feature['Minimum'] = param[3][0]
-        feature['Maximum'] = param[3][1]
-        feature['Median'] = param[3][2]
-        feature['Stddev'] = param[3][3]
+        feature['Observation date'] = param[1]
+        feature['Start date'] = param[2]
+        feature['End date'] = param[3]
+        feature['Variable'] = param[4]
+        feature['Minimum'] = param[5][0]
+        feature['Maximum'] = param[5][1]
+        feature['Median'] = param[5][2]
+        feature['Mean'] = param[5][2]
+        feature['Stddev'] = param[5][3]
 
         return feature
 
