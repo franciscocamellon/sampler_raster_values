@@ -174,14 +174,17 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                     rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
                                                                   os.path.join(inputFolder, imageFile), True)
-                    dateRange = systemService.getDateRange(imageFile, True)
 
                     if rasterLayer is not None:
 
                         stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1))
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+                        observationDate = datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
+                        startDate = datetime.strptime(str(dateRange[0]), '%Y-%m-%d').strftime('%d/%m/%Y')
+                        endDate = datetime.strptime(str(dateRange[1]), '%Y-%m-%d').strftime('%d/%m/%Y')
 
-                        feature = layerService.createFeature(fields, [current, date, dateRange[0], dateRange[1], variable, stats])
+                        feature = layerService.createFeature(fields, [current, observationDate, startDate, endDate,
+                                                                      variable, stats])
                         sink.addFeature(feature, QgsFeatureSink.FastInsert)
 
                         feedback.setProgress(int(current * total))
