@@ -142,11 +142,13 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         project = QgsProject.instance()
         project_crs = project.crs()
 
-        pointDataFrame = pd.read_excel(inputFile)
+        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
         dateList = pointDataFrame[dateField].to_list()
         formattedDateList = []
+
         for date_string in dateList:
-            date_object = datetime.strptime(date_string, '%y/%m/%d')
+            date_value = date_string.to_pydatetime().date()
+            date_object = datetime.strptime(str(date_value), '%Y-%m-%d')
             formatted_date = date_object.strftime('%Y%m%d')
             formattedDateList.append(systemService.formatDate(formatted_date))
 
