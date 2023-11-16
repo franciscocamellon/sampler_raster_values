@@ -213,7 +213,7 @@ class LayerService:
 
         metadata = self.getGdalMetadata(band)
 
-        if float(metadata['scale_factor']) < 1:
+        if metadata['scale_factor'] and float(metadata['scale_factor']) < 1:
             for stat in stats:
                 scaledStats.append(stat * float(metadata['scale_factor']))
             return scaledStats
