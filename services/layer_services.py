@@ -204,14 +204,21 @@ class LayerService:
     def getGdalMetadata(gdalRasterBand):
         return gdalRasterBand.GetMetadata()
 
-    def getSummaryStatistics(self, rasterLayer, bandNumber):
+    def getSummaryStatistics(self, rasterLayer, bandNumber, aquaModisVariable=None):
         scaledStats = []
         band = rasterLayer.GetRasterBand(bandNumber)
+        metadata = self.getGdalMetadata(band)
+        bandAsArray = band.ReadAsArray()
+
+        if aquaModisVariable == 'chlor_a':
+            stats = band.ComputeStatistics(0)
+            mask = bandAsArray != int(metadata['_FillValue'])
+            chlorArray = bandAsArray[mask]
+            return [metadata['STATISTICS_MINIMUM'],metadata['STATISTICS_MAXIMUM'],metadata['STATISTICS_MEAN'],np.median(chlorArray),metadata['STATISTICS_STDDEV']]
+
         stats = band.ComputeStatistics(0)
         bandAsArray = band.ReadAsArray()
         stats.append(float(np.mean(bandAsArray)))
-
-        metadata = self.getGdalMetadata(band)
 
         if 'scale_factor' in metadata and float(metadata['scale_factor']) < 1:
             for stat in stats:

@@ -179,8 +179,9 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                     if rasterLayer is not None:
 
-                        stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1))
+                        stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1), variable)
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+
                         observationDate = datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
                         startDate = datetime.strptime(str(dateRange[0]), '%Y-%m-%d').strftime('%d/%m/%Y')
                         endDate = datetime.strptime(str(dateRange[1]), '%Y-%m-%d').strftime('%d/%m/%Y')
