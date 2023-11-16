@@ -142,11 +142,13 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         project = QgsProject.instance()
         project_crs = project.crs()
 
-        pointDataFrame = pd.read_excel(inputFile)
+        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
         dateList = pointDataFrame[dateField].to_list()
         formattedDateList = []
+
         for date_string in dateList:
-            date_object = datetime.strptime(date_string, '%y/%m/%d')
+            date_value = date_string.to_pydatetime().date()
+            date_object = datetime.strptime(str(date_value), '%Y-%m-%d')
             formatted_date = date_object.strftime('%Y%m%d')
             formattedDateList.append(systemService.formatDate(formatted_date))
 
@@ -177,8 +179,9 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                     if rasterLayer is not None:
 
-                        stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1))
+                        stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1), variable)
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+
                         observationDate = datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
                         startDate = datetime.strptime(str(dateRange[0]), '%Y-%m-%d').strftime('%d/%m/%Y')
                         endDate = datetime.strptime(str(dateRange[1]), '%Y-%m-%d').strftime('%d/%m/%Y')
