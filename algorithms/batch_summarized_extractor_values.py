@@ -34,6 +34,7 @@ import math
 import os
 import numpy as np
 from datetime import datetime
+from datetime import date as nd
 
 import pandas as pd
 from osgeo import gdal
@@ -143,14 +144,7 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         project_crs = project.crs()
 
         pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
-        dateList = pointDataFrame[dateField].to_list()
-        formattedDateList = []
-
-        for date_string in dateList:
-            date_value = date_string.to_pydatetime().date()
-            date_object = datetime.strptime(str(date_value), '%Y-%m-%d')
-            formatted_date = date_object.strftime('%Y%m%d')
-            formattedDateList.append(systemService.formatDate(formatted_date))
+        dateList = [date.to_pydatetime().date() for date in pointDataFrame[dateField].to_list()]
 
         variable = layerService.retrieveNetcdfVariable(aquaModisVariable)
 
@@ -169,10 +163,11 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
             if feedback.isCanceled():
                 raise QgsProcessingException(self.tr('\nProcessing cancelled by the user!\n'))
 
-            dateRange = systemService.getDateRange(imageFile)
+            startDate, endDate = systemService.getDateRange(imageFile)
 
-            for date in formattedDateList:
-                if systemService.isDateWithinRange(date, dateRange[0], dateRange[1]):
+            for observationDate in dateList:
+
+                if systemService.isDateWithinRange(observationDate, startDate, endDate):
 
                     rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
                                                                   os.path.join(inputFolder, imageFile), True)
@@ -181,10 +176,6 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                         stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1), variable)
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
-
-                        observationDate = datetime.strptime(str(date), '%Y-%m-%d').strftime('%d/%m/%Y')
-                        startDate = datetime.strptime(str(dateRange[0]), '%Y-%m-%d').strftime('%d/%m/%Y')
-                        endDate = datetime.strptime(str(dateRange[1]), '%Y-%m-%d').strftime('%d/%m/%Y')
 
                         feature = layerService.createFeature(fields, [current, observationDate, startDate, endDate,
                                                                       variable, stats])
