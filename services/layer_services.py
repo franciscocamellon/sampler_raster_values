@@ -221,11 +221,11 @@ class LayerService:
             mask = bandAsArray != int(metadata['_FillValue'])
             chlorArray = bandAsArray[mask]
 
-            STATISTICS_DICTIONARY['STATISTICS_MINIMUM'] = metadata['STATISTICS_MINIMUM']
-            STATISTICS_DICTIONARY['STATISTICS_MAXIMUM'] = metadata['STATISTICS_MAXIMUM']
-            STATISTICS_DICTIONARY['STATISTICS_MEAN'] = metadata['STATISTICS_MEAN']
+            STATISTICS_DICTIONARY['STATISTICS_MINIMUM'] = float(metadata['STATISTICS_MINIMUM'])
+            STATISTICS_DICTIONARY['STATISTICS_MAXIMUM'] = float(metadata['STATISTICS_MAXIMUM'])
+            STATISTICS_DICTIONARY['STATISTICS_MEAN'] = float(metadata['STATISTICS_MEAN'])
             STATISTICS_DICTIONARY['STATISTICS_MEDIAN'] = float(np.median(chlorArray))
-            STATISTICS_DICTIONARY['STATISTICS_STDDEV'] = metadata['STATISTICS_STDDEV']
+            STATISTICS_DICTIONARY['STATISTICS_STDDEV'] = float(metadata['STATISTICS_STDDEV'])
 
             return STATISTICS_DICTIONARY
 

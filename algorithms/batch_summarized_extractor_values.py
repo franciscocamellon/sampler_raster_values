@@ -45,12 +45,23 @@ from qgis.utils import iface
 from qgis.PyQt.QtCore import QCoreApplication
 from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject
 from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingParameterString, QgsFeatureSink,
-                       QgsProcessingOutputVectorLayer, QgsProcessingException,
+                       QgsProcessingOutputVectorLayer, QgsProcessingException, QgsProcessingUtils,
                        QgsProcessingParameterVectorLayer, QgsProcessingParameterFile,
                        QgsProcessingAlgorithm, QgsProcessingParameterNumber, QgsProcessingParameterFeatureSink)
 
 from ..services.layer_services import LayerService
 from ..services.system_service import SystemService
+
+ID_LIST = []
+OBSERVATION_DATE_LIST = []
+START_DATE_LIST = []
+END_DATE_LIST = []
+VARIABLE_LIST = []
+MINIMUM_LIST = []
+MAXIMUM_LIST = []
+MEDIAN_LIST = []
+MEAN_LIST = []
+STDDEV_LIST = []
 
 
 class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
@@ -64,6 +75,7 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
     AQUA_MODIS_VARIABLE = 'AQUA_MODIS_VARIABLE'
     BAND_NUMBER = 'BAND_NUMBER'
     OUTPUT = 'OUTPUT'
+    OUTPUT_FOLDER = 'OUTPUT_FOLDER'
 
     def initAlgorithm(self, config):
         """
@@ -101,7 +113,7 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         self.addParameter(
             QgsProcessingParameterEnum(
                 self.BAND_NUMBER,
-                self.tr('AQUA MODIS variable'),
+                self.tr('Raster band'),
                 options=['1', '2', '3'],
                 defaultValue=0,
                 optional=False
@@ -120,9 +132,10 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         )
 
         self.addParameter(
-            QgsProcessingParameterFeatureSink(
-                self.OUTPUT,
-                self.tr('Summarized values')
+            QgsProcessingParameterFile(
+                self.OUTPUT_FOLDER,
+                self.tr('Output folder'),
+                behavior=QgsProcessingParameterFile.Folder
             )
         )
 
@@ -135,28 +148,20 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         systemService = SystemService()
 
         inputFolder = self.parameterAsFile(parameters, self.INPUT_FOLDER, context)
+        outputFolder = self.parameterAsFile(parameters, self.OUTPUT_FOLDER, context)
         inputFile = self.parameterAsFile(parameters, self.INPUT_FILE, context)
         aquaModisVariable = self.parameterAsInt(parameters, self.AQUA_MODIS_VARIABLE, context)
         bandNumber = self.parameterAsInt(parameters, self.BAND_NUMBER, context)
         dateField = self.parameterAsString(parameters, self.DATE_FIELD, context)
-
-        project = QgsProject.instance()
-        project_crs = project.crs()
 
         pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
         dateList = [date.to_pydatetime().date() for date in pointDataFrame[dateField].to_list()]
 
         variable = layerService.retrieveNetcdfVariable(aquaModisVariable)
 
-        fields = layerService.createFields({'id': QVariant.Int, 'Observation date': QVariant.String,
-                                            'Start date': QVariant.String, 'End date': QVariant.String, 'Variable': QVariant.String,
-                                            'Minimum': QVariant.Double, 'Maximum': QVariant.Double, 'Median': QVariant.Double,
-                                            'Mean': QVariant.Double, 'Stddev': QVariant.Double})
-
-        (sink, destination_id) = self.parameterAsSink(parameters, self.OUTPUT, context, fields, 100, project_crs)
-
         netcdfImages = systemService.filterFilesInDirectory(inputFolder, '.nc')
         total = 100.0 / len(netcdfImages) if len(netcdfImages) else 0
+        counter = 0
 
         for current, imageFile in enumerate(netcdfImages):
 
@@ -169,6 +174,8 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                 if systemService.isDateWithinRange(observationDate, startDate, endDate):
 
+                    counter += 1
+
                     rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
                                                                   os.path.join(inputFolder, imageFile), True)
 
@@ -177,14 +184,46 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
                         stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1), variable)
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
 
-                        feature = layerService.createFeature(fields, [current, observationDate, startDate, endDate,
-                                                                      variable, stats])
-                        sink.addFeature(feature, QgsFeatureSink.FastInsert)
+                        ID_LIST.append(counter)
+                        OBSERVATION_DATE_LIST.append(observationDate)
+                        START_DATE_LIST.append(startDate)
+                        END_DATE_LIST.append(endDate)
+                        VARIABLE_LIST.append(variable)
+                        MINIMUM_LIST.append(stats['STATISTICS_MINIMUM'])
+                        MAXIMUM_LIST.append(stats['STATISTICS_MAXIMUM'])
+                        MEDIAN_LIST.append(stats['STATISTICS_MEAN'])
+                        MEAN_LIST.append(stats['STATISTICS_MEDIAN'])
+                        STDDEV_LIST.append(stats['STATISTICS_STDDEV'])
 
                         feedback.setProgress(int(current * total))
 
                     else:
                         raise QgsProcessingException(self.tr('\nInvalid raster!\n'))
+
+        excelDictionary = {
+            'id': ID_LIST,
+            'Observation date': OBSERVATION_DATE_LIST,
+            'Start date': START_DATE_LIST,
+            'End date': END_DATE_LIST,
+            'Variable': VARIABLE_LIST,
+            'Minimum': MINIMUM_LIST,
+            'Maximum': MAXIMUM_LIST,
+            'Median': MEDIAN_LIST,
+            'Mean': MEAN_LIST,
+            'Stddev': STDDEV_LIST
+        }
+
+        output_path = os.path.join(outputFolder, 'Summarized values.xlsx')
+
+        excelDataFrame = pd.DataFrame.from_dict(excelDictionary)
+        with pd.ExcelWriter(output_path, mode='w', date_format='DD/MM/YYYY') as writer:
+            excelDataFrame.to_excel(writer, sheet_name='Statistics', index=False)
+
+        # Create a vector layer from the Excel file
+        excelLayer = QgsVectorLayer(output_path, 'Summarized values', 'ogr')
+        if excelLayer.isValid():
+            # Add the layer to the QGIS map canvas
+            QgsProject.instance().addMapLayer(excelLayer)
 
         return {self.OUTPUT: None}
 
