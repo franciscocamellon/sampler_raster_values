@@ -213,11 +213,10 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
             'Stddev': STDDEV_LIST
         }
 
-        output_path = os.path.join(outputFolder, 'Summarized values.xlsx')
+        output_path = os.path.join(outputFolder, 'Summarized values.csv')
 
         excelDataFrame = pd.DataFrame.from_dict(excelDictionary)
-        with pd.ExcelWriter(output_path, mode='w', date_format='DD/MM/YYYY') as writer:
-            excelDataFrame.to_excel(writer, sheet_name='Statistics', index=False)
+        excelDataFrame.to_csv(output_path)
 
         # Create a vector layer from the Excel file
         excelLayer = QgsVectorLayer(output_path, 'Summarized values', 'ogr')
