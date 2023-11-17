@@ -40,6 +40,14 @@ from qgis.PyQt.Qt import QVariant
 
 from .system_service import SystemService
 
+STATISTICS_DICTIONARY = {
+    'STATISTICS_MINIMUM': 0.0,
+    'STATISTICS_MAXIMUM': 0.0,
+    'STATISTICS_MEAN': 0.0,
+    'STATISTICS_MEDIAN': 0.0,
+    'STATISTICS_STDDEV': 0.0
+}
+
 
 class LayerService:
 
@@ -205,26 +213,37 @@ class LayerService:
         return gdalRasterBand.GetMetadata()
 
     def getSummaryStatistics(self, rasterLayer, bandNumber, aquaModisVariable=None):
-        scaledStats = []
         band = rasterLayer.GetRasterBand(bandNumber)
         metadata = self.getGdalMetadata(band)
         bandAsArray = band.ReadAsArray()
 
         if aquaModisVariable == 'chlor_a':
-            stats = band.ComputeStatistics(0)
             mask = bandAsArray != int(metadata['_FillValue'])
             chlorArray = bandAsArray[mask]
-            return [metadata['STATISTICS_MINIMUM'],metadata['STATISTICS_MAXIMUM'],metadata['STATISTICS_MEAN'],np.median(chlorArray),metadata['STATISTICS_STDDEV']]
 
-        stats = band.ComputeStatistics(0)
-        bandAsArray = band.ReadAsArray()
-        stats.append(float(np.mean(bandAsArray)))
+            STATISTICS_DICTIONARY['STATISTICS_MINIMUM'] = float(metadata['STATISTICS_MINIMUM'])
+            STATISTICS_DICTIONARY['STATISTICS_MAXIMUM'] = float(metadata['STATISTICS_MAXIMUM'])
+            STATISTICS_DICTIONARY['STATISTICS_MEAN'] = float(metadata['STATISTICS_MEAN'])
+            STATISTICS_DICTIONARY['STATISTICS_MEDIAN'] = float(np.median(chlorArray))
+            STATISTICS_DICTIONARY['STATISTICS_STDDEV'] = float(metadata['STATISTICS_STDDEV'])
+
+            return STATISTICS_DICTIONARY
 
         if 'scale_factor' in metadata and float(metadata['scale_factor']) < 1:
-            for stat in stats:
-                scaledStats.append(stat * float(metadata['scale_factor']))
-            return scaledStats
-        return stats
+            mask = bandAsArray != int(metadata['_FillValue'])
+            sttArray = bandAsArray[mask]
+
+            STATISTICS_DICTIONARY['STATISTICS_MINIMUM'] = float(metadata['STATISTICS_MINIMUM']) * float(
+                metadata['scale_factor'])
+            STATISTICS_DICTIONARY['STATISTICS_MAXIMUM'] = float(metadata['STATISTICS_MAXIMUM']) * float(
+                metadata['scale_factor'])
+            STATISTICS_DICTIONARY['STATISTICS_MEAN'] = float(metadata['STATISTICS_MEAN']) * float(
+                metadata['scale_factor'])
+            STATISTICS_DICTIONARY['STATISTICS_MEDIAN'] = float(np.median(sttArray)) * float(metadata['scale_factor'])
+            STATISTICS_DICTIONARY['STATISTICS_STDDEV'] = float(metadata['STATISTICS_STDDEV']) * float(
+                metadata['scale_factor'])
+
+            return STATISTICS_DICTIONARY
 
     @staticmethod
     def createFeature(fields, param):
@@ -234,11 +253,10 @@ class LayerService:
         feature['Start date'] = str(param[2])
         feature['End date'] = str(param[3])
         feature['Variable'] = param[4]
-        feature['Minimum'] = param[5][0]
-        feature['Maximum'] = param[5][1]
-        feature['Median'] = param[5][2]
-        feature['Mean'] = param[5][4]
-        feature['Stddev'] = param[5][3]
+        feature['Minimum'] = param[5]['STATISTICS_MINIMUM']
+        feature['Maximum'] = param[5]['STATISTICS_MAXIMUM']
+        feature['Median'] = param[5]['STATISTICS_MEAN']
+        feature['Mean'] = param[5]['STATISTICS_MEDIAN']
+        feature['Stddev'] = param[5]['STATISTICS_STDDEV']
 
         return feature
-
