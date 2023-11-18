@@ -154,8 +154,11 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         bandNumber = self.parameterAsInt(parameters, self.BAND_NUMBER, context)
         dateField = self.parameterAsString(parameters, self.DATE_FIELD, context)
 
-        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
-        dateList = [date.to_pydatetime().date() for date in pointDataFrame[dateField].to_list()]
+        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField], date_format='%d/%m/%Y')
+
+        # dateList = [date.to_pydatetime().date() for date in pointDataFrame[dateField].to_list()]
+        # dateList = [date for date in pointDataFrame[dateField]]
+
 
         variable = layerService.retrieveNetcdfVariable(aquaModisVariable)
 
@@ -170,9 +173,13 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
             startDate, endDate = systemService.getDateRange(imageFile)
 
-            for observationDate in dateList:
+            for observationDate in pointDataFrame[dateField]:
+                parsed_date = datetime.strptime(observationDate, '%d/%m/%y')
+                converted_date = parsed_date.date()
 
-                if systemService.isDateWithinRange(observationDate, startDate, endDate):
+                if systemService.isDateWithinRange(converted_date, startDate, endDate):
+                    startDateConverted = datetime.strptime(str(startDate), '%Y-%m-%d').strftime('%d/%m/%y')
+                    endDateConverted = datetime.strptime(str(endDate), '%Y-%m-%d').strftime('%d/%m/%y')
 
                     counter += 1
 
@@ -186,8 +193,8 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
                         ID_LIST.append(counter)
                         OBSERVATION_DATE_LIST.append(observationDate)
-                        START_DATE_LIST.append(startDate)
-                        END_DATE_LIST.append(endDate)
+                        START_DATE_LIST.append(startDateConverted)
+                        END_DATE_LIST.append(endDateConverted)
                         VARIABLE_LIST.append(variable)
                         MINIMUM_LIST.append(stats['STATISTICS_MINIMUM'])
                         MAXIMUM_LIST.append(stats['STATISTICS_MAXIMUM'])
@@ -212,9 +219,9 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
             'Mean': MEAN_LIST,
             'Stddev': STDDEV_LIST
         }
-
+        #
         output_path = os.path.join(outputFolder, 'Summarized values.csv')
-
+        #
         excelDataFrame = pd.DataFrame.from_dict(excelDictionary)
         excelDataFrame.to_csv(output_path, sep=';', index=False)
 
