@@ -154,11 +154,10 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         bandNumber = self.parameterAsInt(parameters, self.BAND_NUMBER, context)
         dateField = self.parameterAsString(parameters, self.DATE_FIELD, context)
 
-        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField], date_format='%d/%m/%Y')
+        pointDataFrame = pd.read_excel(inputFile, parse_dates=[dateField])
+        pointDataFrame[dateField] = pd.to_datetime(pointDataFrame[dateField])
 
-        # dateList = [date.to_pydatetime().date() for date in pointDataFrame[dateField].to_list()]
-        # dateList = [date for date in pointDataFrame[dateField]]
-
+        pointDataFrame['FormattedDate'] = pointDataFrame[dateField].dt.strftime('%Y%m%d')
 
         variable = layerService.retrieveNetcdfVariable(aquaModisVariable)
 
@@ -173,14 +172,10 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
             startDate, endDate = systemService.getDateRange(imageFile)
 
-            for observationDate in pointDataFrame[dateField]:
-                parsed_date = datetime.strptime(observationDate, '%d/%m/%y')
-                converted_date = parsed_date.date()
+            for observationDate in pointDataFrame['FormattedDate']:
+                parsedObservationDate = systemService.formatDate(observationDate)
 
-                if systemService.isDateWithinRange(converted_date, startDate, endDate):
-                    startDateConverted = datetime.strptime(str(startDate), '%Y-%m-%d').strftime('%d/%m/%y')
-                    endDateConverted = datetime.strptime(str(endDate), '%Y-%m-%d').strftime('%d/%m/%y')
-
+                if systemService.isDateWithinRange(parsedObservationDate, startDate, endDate):
                     counter += 1
 
                     rasterLayer = layerService.createNetcdfRaster(aquaModisVariable, imageFile,
@@ -192,9 +187,9 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
                         feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
 
                         ID_LIST.append(counter)
-                        OBSERVATION_DATE_LIST.append(observationDate)
-                        START_DATE_LIST.append(startDateConverted)
-                        END_DATE_LIST.append(endDateConverted)
+                        OBSERVATION_DATE_LIST.append(datetime.strptime(str(parsedObservationDate), '%Y-%m-%d').strftime('%d/%m/%y'))
+                        START_DATE_LIST.append(datetime.strptime(str(startDate), '%Y-%m-%d').strftime('%d/%m/%y'))
+                        END_DATE_LIST.append(datetime.strptime(str(endDate), '%Y-%m-%d').strftime('%d/%m/%y'))
                         VARIABLE_LIST.append(variable)
                         MINIMUM_LIST.append(stats['STATISTICS_MINIMUM'])
                         MAXIMUM_LIST.append(stats['STATISTICS_MAXIMUM'])
@@ -219,17 +214,13 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
             'Mean': MEAN_LIST,
             'Stddev': STDDEV_LIST
         }
-        #
-        output_path = os.path.join(outputFolder, 'Summarized values.csv')
-        #
-        excelDataFrame = pd.DataFrame.from_dict(excelDictionary)
-        excelDataFrame.to_csv(output_path, sep=';', index=False)
 
-        # Create a vector layer from the Excel file
-        excelLayer = QgsVectorLayer(output_path, 'Summarized values', 'ogr')
-        if excelLayer.isValid():
-            # Add the layer to the QGIS map canvas
-            QgsProject.instance().addMapLayer(excelLayer)
+        outputPath = os.path.join(outputFolder, 'Summarized values.csv')
+
+        excelDataFrame = pd.DataFrame.from_dict(excelDictionary)
+        excelDataFrame.to_csv(outputPath, sep=';', index=False, decimal=',')
+
+        layerService.loadNonSpatialLayer(outputPath, 'Summarized values')
 
         return {self.OUTPUT: None}
 

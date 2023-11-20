@@ -35,7 +35,7 @@ import numpy as np
 
 from osgeo import gdal
 from qgis.core.additions.edit import edit
-from qgis.core import QgsProject, QgsFeature, QgsField, QgsFields, QgsPointXY, QgsRasterLayer, QgsRasterDataProvider
+from qgis.core import QgsProject, QgsFeature, QgsField, QgsFields, QgsPointXY, QgsVectorLayer, QgsRasterLayer, QgsRasterDataProvider
 from qgis.PyQt.Qt import QVariant
 
 from .system_service import SystemService
@@ -260,3 +260,9 @@ class LayerService:
         feature['Stddev'] = param[5]['STATISTICS_STDDEV']
 
         return feature
+
+    @staticmethod
+    def loadNonSpatialLayer(layerPath, layerName):
+        nonSpatialLayer = QgsVectorLayer(layerPath, layerName, 'ogr')
+        if nonSpatialLayer.isValid():
+            QgsProject.instance().addMapLayer(nonSpatialLayer)
