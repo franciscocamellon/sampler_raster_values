@@ -214,6 +214,7 @@ class LayerService:
 
     def getSummaryStatistics(self, rasterLayer, bandNumber, aquaModisVariable=None):
         band = rasterLayer.GetRasterBand(bandNumber)
+        band.ComputeStatistics(0)
         metadata = self.getGdalMetadata(band)
         bandAsArray = band.ReadAsArray()
 
