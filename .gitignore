@@ -164,3 +164,4 @@ cython_debug/
 /.idea/inspectionProfiles/Project_Default.xml
 /.idea/sampler_raster_values.iml
 /.idea/vcs.xml
+/.vscode/launch.json
