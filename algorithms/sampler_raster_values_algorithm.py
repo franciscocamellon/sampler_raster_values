@@ -44,6 +44,7 @@ from qgis.core import (QgsProcessing, QgsProcessingException,
 
 from ..services.messages_service import MessageService
 from ..services.layer_services import LayerService
+from .help.algorithms_help import HTMLHelpCreator as Helper
 
 
 class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
@@ -156,14 +157,14 @@ class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Values Extractor'
+        return 'values_extractor'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return self.tr('Values Extractor')
 
     def group(self):
         """
@@ -184,6 +185,9 @@ class SamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
+
+    def shortHelpString(self):
+        return Helper.shortHelpString(self.name())
 
     def createInstance(self):
         return SamplerRasterValuesAlgorithm()

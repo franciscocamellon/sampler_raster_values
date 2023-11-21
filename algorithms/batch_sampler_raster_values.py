@@ -41,6 +41,7 @@ from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingP
 
 from ..services.system_service import SystemService
 from ..services.layer_services import LayerService
+from .help.algorithms_help import HTMLHelpCreator as Helper
 
 
 class BatchSamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
@@ -171,7 +172,7 @@ class BatchSamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
                                                                              layerAttribute, newField)
                         newFeatures.append(updatedFeature)
 
-                        feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+                        feedback.pushInfo(self.tr(f'File {os.path.basename(imageFile)}, processed!\n '))
 
                     else:
                         raise QgsProcessingException(self.tr('\nInvalid raster!\n'))
@@ -188,14 +189,14 @@ class BatchSamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Batch Values Extractor'
+        return 'batch_values_extractor'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return self.tr('Batch Values Extractor')
 
     def group(self):
         """
@@ -216,6 +217,9 @@ class BatchSamplerRasterValuesAlgorithm(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
+
+    def shortHelpString(self):
+        return Helper.shortHelpString(self.name())
 
     def createInstance(self):
         return BatchSamplerRasterValuesAlgorithm()

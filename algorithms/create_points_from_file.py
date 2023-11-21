@@ -47,6 +47,7 @@ from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingP
 
 from ..services.layer_services import LayerService
 from ..services.system_service import SystemService
+from .help.algorithms_help import HTMLHelpCreator as Helper
 
 
 class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
@@ -150,14 +151,14 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Create Points from File'
+        return 'create_points_from_file'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return self.tr('Create Points from File')
 
     def group(self):
         """
@@ -178,6 +179,9 @@ class CreatePointsFromFileAlgorithm(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
+
+    def shortHelpString(self):
+        return Helper.shortHelpString(self.name())
 
     def createInstance(self):
         return CreatePointsFromFileAlgorithm()
