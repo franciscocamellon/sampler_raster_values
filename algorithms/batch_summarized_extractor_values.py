@@ -29,28 +29,18 @@ __copyright__ = '(C) 2023 by CamellOnCase'
 
 __revision__ = '$Format:%H$'
 
-import csv
-import math
 import os
-import numpy as np
 from datetime import datetime
-from datetime import date as nd
 
 import pandas as pd
-from osgeo import gdal
-from pandas._libs.tslibs.timestamps import Timestamp
-
-from qgis.PyQt.Qt import QVariant
-from qgis.utils import iface
 from qgis.PyQt.QtCore import QCoreApplication
-from qgis.core import QgsVectorLayer, QgsField, QgsFeature, QgsGeometry, QgsPointXY, QgsProject
-from qgis.core import (QgsProcessing, QgsProcessingParameterEnum, QgsProcessingParameterString, QgsFeatureSink,
-                       QgsProcessingOutputVectorLayer, QgsProcessingException, QgsProcessingUtils,
-                       QgsProcessingParameterVectorLayer, QgsProcessingParameterFile,
-                       QgsProcessingAlgorithm, QgsProcessingParameterNumber, QgsProcessingParameterFeatureSink)
+from qgis.core import (QgsProcessingParameterEnum, QgsProcessingParameterString, QgsProcessingException,
+                       QgsProcessingParameterFile,
+                       QgsProcessingAlgorithm)
 
 from ..services.layer_services import LayerService
 from ..services.system_service import SystemService
+from .help.algorithms_help import HTMLHelpCreator as Helper
 
 ID_LIST = []
 OBSERVATION_DATE_LIST = []
@@ -184,7 +174,7 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
                     if rasterLayer is not None:
 
                         stats = layerService.getSummaryStatistics(rasterLayer, (bandNumber + 1), variable)
-                        feedback.pushInfo(self.tr(f'\n File {os.path.basename(imageFile)}, processed!'))
+                        feedback.pushInfo(self.tr(f'File {os.path.basename(imageFile)}, processed!\n '))
 
                         ID_LIST.append(counter)
                         OBSERVATION_DATE_LIST.append(datetime.strptime(str(parsedObservationDate), '%Y-%m-%d').strftime('%d/%m/%y'))
@@ -232,14 +222,14 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
         lowercase alphanumeric characters only and no spaces or other
         formatting characters.
         """
-        return 'Batch Summarized Values Extractor'
+        return 'batch_summarized_values_extractor'
 
     def displayName(self):
         """
         Returns the translated algorithm name, which should be used for any
         user-visible display of the algorithm name.
         """
-        return self.tr(self.name())
+        return self.tr('Batch Summarized Values Extractor')
 
     def group(self):
         """
@@ -260,6 +250,9 @@ class BatchSummarizedExtractorAlgorithm(QgsProcessingAlgorithm):
 
     def tr(self, string):
         return QCoreApplication.translate('Processing', string)
+
+    def shortHelpString(self):
+        return Helper.shortHelpString(self.name())
 
     def createInstance(self):
         return BatchSummarizedExtractorAlgorithm()
